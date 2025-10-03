@@ -27,6 +27,17 @@ def save_mask_image(mask, out_path):
     plt.savefig(out_path, bbox_inches='tight', pad_inches=0)
     plt.close()
 
+def foam_heuristic(red, green, blue, nir, water_mask, bright_thr=0.45, nir_thr=0.15):
+    red_norm = red/(red.max() + 1e-8)
+    green_norm = green/(green.max() + 1e-8)
+    blue_norm = blue/(blue.max() + 1e-8)
+    nir_norm = nir/(nir.max() + 1e-8)
+
+    vis = (red_norm + green_norm + blue_norm)/3.0
+    foam_mask = (water_mask) & (vis > bright_thr) & (nir_norm < nir_thr)
+    foam_fraction = foam_mask.sum()/(water_mask.sum() + 1e-8)
+    return foam_mask, foam_fraction
+
 
 if __name__ == "__main__":
     import sys
@@ -44,7 +55,7 @@ if __name__ == "__main__":
     ndwi = calc_ndwi(green, nir)
 
     water_mask = water_mask_from_ndwi(ndwi, threshold = 0.2)
-
+    
     area = area_from_mask(water_mask)
     print(f"Detected water area: {area:.2f} m^2")
 
