@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite Water Analyst | Command Center</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e; 
+            color: #e4e4e4;
+            height: 100vh;
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column; 
+        }
+        
+        #header-area {
+            padding: 15px 20px 10px 20px; 
+            background: #2a2a4a; 
+            box-shadow: 0 3px 10px rgba(0, 255, 255, 0.1); 
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        h1 {
+            color: #00ffff;
+            margin-bottom: 3px; 
+            font-weight: 600;
+            font-size: 1.8em;
+        }
+        #header-area p {
+            color: #b0c4de;
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        #main-content-layout {
+            display: flex;
+            flex-grow: 1; 
+            overflow: hidden; 
+            padding: 10px; 
+            gap: 10px; 
+        }
+
+        #map-section {
+            flex: 1;
+            min-width: 50%; 
+            background-color: #1a1a2e;
+            padding: 15px; 
+            border-radius: 8px;
+            border: 2px solid #00ffff; 
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); 
+            height: 100%;
+        }
+
+        #map-section h2 {
+            color: #00ffff; 
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 1.5em;
+        }
+        #map-section p {
+            text-align: left; 
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+        }
+        
+        #map {
+            flex-grow: 1; 
+            height: 100%; 
+            margin-bottom: 10px;
+            border: 1px solid #00ffff;
+            border-radius: 4px;
+        }
+
+        #command-panel {
+            flex: 1; 
+            min-width: 350px;
+            background: #2a2a4a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255, 102, 255, 0.2);
+            overflow-y: auto; 
+            height: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: flex-end; 
+        }
+        .input-group > div {
+            flex-grow: 1;
+        }
+
+        input[type="text"], button {
+            padding: 10px;
+            border-radius: 4px;
+            border: none;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        input[type="text"] {
+            background-color: #1a1a2e;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+        }
+        button {
+            background-color: #ff66ff; 
+            color: white;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #cc33cc;
+        }
+        #map-section button {
+            background-color: #007bff;
+        }
+        #map-section button:hover {
+            background-color: #0056b3;
+        }
+
+        #results {
+            padding-top: 5px;
+        }
+        #command-panel h2 {
+            color: #ff66ff;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        #results h2 {
+            color: #90ee90;
+            padding-top: 10px;
+        }
+        #results h3 {
+            color: #00ffff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+
+        .ai-summary-point {
+            margin: 10px 0;
+            padding: 15px;
+            background: #351a44; 
+            border: 2px solid #ff66ff;
+            border-radius: 6px;
+            font-size: 1em;
+            line-height: 1.5;
+        }
+
+        .data-point {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a2e; 
+            border: 1px dashed #6699ff;
+            border-radius: 4px;
+        }
+        .data-point p {
+            text-align: left;
+            margin: 3px 0;
+            font-size: 0.95em;
+        }
+        .data-point h4 {
+            color: #ff66ff;
+            margin: 0 0 8px 0;
+            border-bottom: 1px solid #4a4a66;
+            padding-bottom: 4px;
+            font-size: 1.1em;
+        }
+
+        #thumbnail { 
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 2px solid #ff66ff; 
+        }
+
+        .image-bands-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .image-bands-row .main-image {
+            flex: 1 1 220px; 
+            min-width: 200px;
+        }
+        .image-bands-row .bands-column {
+            flex: 0 0 180px; 
+            min-width: 140px;
+            max-width: 260px;
+            background: #15152b;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        .bands-title {
+            color: #90ee90;
+            font-size: 0.95em;
+            margin-bottom: 8px;
+        }
+        .bands-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .band-thumb {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #0f0f1a;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+        .band-thumb img {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #666;
+        }
+        .band-thumb .band-label {
+            font-size: 0.85em;
+            color: #bcd;
+        }
+
+        .ndvi-bar-container {
+            margin: 10px 0 5px 0;
+            height: 15px;
+            background-color: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
+            border: 1px solid #555;
+        }
+        .ndvi-legend {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7em;
+            margin-top: 3px;
+        }
+
+        @media (max-width: 420px) {
+            .image-bands-row { flex-direction: column; }
+            .image-bands-row .bands-column { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-area">
+        <h1>SATELLITE WATER ANALYST COMMAND CENTER 🛰️</h1>
+        <p>Use the interactive map or manually enter a Sentinel Tile ID to initiate deep-dive analysis.</p>
+    </div>
+
+    <div id="main-content-layout">
+        
+        <div id="map-section">
+            <h2>1. Location Selection</h2>
+            <p>Click on the map to place a pinpoint location.</p>
+            <div id="map"></div>
+            <p id="map-message" style="color: #90ee90; text-align: center; font-weight: bold; margin-bottom: 10px;"></p>
+            <button onclick="getTileIdFromMap()">Use Selected Location (Pinpoint)</button>
+        </div>
+        
+        <div id="command-panel">
+            <h2>2. Analysis Request</h2>
+            <div class="input-group">
+                <div>
+                    <label for="tileId" style="display: block; margin-bottom: 5px;">Sentinel Tile ID:</label>
+                    <input type="text" id="tileId" placeholder="e.g., 43QFA" value="">
+                </div>
+                <div style="flex-basis: 40%;">
+                    <label style="display: block; margin-bottom: 5px; color: #2a2a4a;">_</label> 
+                    <button onclick="analyzeLocation()">ANALYZE DATA</button>
+                </div>
+            </div>
+
+            <hr style="border: 1px solid #4a4a66; margin: 15px 0;">
+
+            <div id="loading" class="loading" style="display: none;">
+                <p>Analyzing 24 months of data from S3 and invoking AI analyst...</p>
+            </div>
+            
+            <div id="results">
+                <h2 style="color:#b0c4de;">3. Analysis Report Console</h2>
+                <p style="text-align: left; font-style: italic;">Results will appear here upon completion.</p>
+            </div>
+        </div>
+
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const API_ENDPOINT = 'https://ssl92vdwe7.execute-api.ap-south-1.amazonaws.com/v1/analyze'; 
+        const resultsDiv = document.getElementById('results');
+        const loadingDiv = document.getElementById('loading');
+        const tileInput = document.getElementById('tileId');
+        const mapMessage = document.getElementById('map-message');
+        
+        let map, marker;
+        let selectedLatLon = null;
+        
+        const AVAILABLE_TILES = [
+            '41QKA', '41QKB', '41QKC', '41QKD', '41QKE', '41QKF', '41QKG', '41QKU', '41QKV', 
+            '41QLB', '41QLC', '41QLD', '41QLE', '41QLF', '41QLG', '41QMG', '41QNG', '41QPG', 
+            '41QQG', '41QRD', '41QRE', '41QRF', '41QRG', 
+            '41RKH', '41RKJ', '41RKK', '41RKL', '41RKM', '41RKN', '41RKP', '41RKQ', 
+            '41RLH', '41RLJ', '41RLK', '41RLL', '41RLM', '41RLN', '41RLP', '41RLQ', 
+            '41RMH', '41RMJ', '41RMK', '41RML', '41RMM', '41RMN', '41RMP', '41RMQ', 
+            '41RNH', '41RNJ', '41RNK', '41RNL', '41RNM', '41RNN', '41RNP', '41RNQ', 
+            '41RPH', '41RPJ', '41RPK', '41RPL', '41RPM', '41RPN', '41RPP', '41RPQ', 
+            '41RQH', '41RQJ', '41RQK', '41RQL', '41RQM', '41RQN', 
+            '42QTJ', '42QTK', '42QTL', '42QTM', '42QUJ', '42QUK', '42QUL', '42QUM', 
+            '42QVH', '42QVJ', '42QVK', '42QVL', '42QVM', '42QWH', '42QWJ', '42QWK', 
+            '42QWL', '42QWM', '42QXD', '42QXE', '42QXF', '42QXG', '42QXH', '42QXJ', 
+            '42QXK', '42QXL', '42QXM', '42QYD', '42QYE', '42QYF', '42QYG', '42QYH', 
+            '42QYJ', '42QYK', '42QYL', '42QYM', '42QZD', '42QZE', '42QZF', '42QZG', 
+            '42QZH', '42QZJ', '42QZK', '42QZL', '42QZM', 
+            '42RTN', '42RTP', '42RTQ', '42RTR', '42RTS', '42RTT', '42RTU', '42RTV', 
+            '42RUN', '42RUP', '42RUQ', '42RUR', '42RUS', '42RUT', '42RUU', '42RUV', 
+            '42RVN', '42RVP', '42RVQ', '42RVR', '42RVS', '42RVT', '42RVU', '42RVV', 
+            '42RWN', '42RWP', '42RWQ', '42RWR', '42RWS', '42RWT', '42RWU', '42RWV', 
+            '42RXN', '42RXP', '42RXQ', '42RXR', '42RXS', '42RXT', '42RXU', '42RXV', 
+            '42RYN', '42RYP', '42RYQ', '42RYR', '42RYS', '42RYT', '42RYU', '42RYV', 
+            '42RZN', '42RZP', 
+            '43QFA', '43QFB', '43QFC', '43QFD', '43QFE', '43QFF', '43QFG', 
+            '43RGM', 
+            '44QKD', '44QKF', '44QKG', '44QKH', '44QKJ'
+        ];
+        
+        function getRandomTileByGZD(gzdPrefix) {
+            const matchingTiles = AVAILABLE_TILES.filter(tile => tile.startsWith(gzdPrefix));
+            if (matchingTiles.length > 0) {
+                const randomIndex = Math.floor(Math.random() * matchingTiles.length);
+                return { tile: matchingTiles[randomIndex], match: true };
+            } else {
+                const randomIndex = Math.floor(Math.random() * AVAILABLE_TILES.length);
+                return { tile: AVAILABLE_TILES[randomIndex], match: false };
+            }
+        }
+        
+        function latLonToSentinelTileID(lat, lon) {
+            let utmZone = Math.floor((lon + 180) / 6) % 60 + 1;
+            const latitudeBands = 'CDEFGHJKLMNPQRSTUVWXX';
+            let latBandIndex = Math.floor((lat + 80) / 8);
+            if (latBandIndex < 0) latBandIndex = 0; 
+            if (latBandIndex >= latitudeBands.length) latBandIndex = latitudeBands.length - 1; 
+            const latBand = latitudeBands[latBandIndex];
+            return `${utmZone}${latBand}`;
+        }
+
+        function initializeMap() {
+            map = L.map('map').setView([20.5937, 78.9629], 5); 
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+                selectedLatLon = e.latlng;
+                marker = L.marker(selectedLatLon).addTo(map);
+                mapMessage.innerHTML = `Location Selected: Lat ${selectedLatLon.lat.toFixed(4)}, Lon ${selectedLatLon.lng.toFixed(4)}`;
+            });
+            mapMessage.innerHTML = 'Click on the map to set a location.';
+        }
+        
+        document.addEventListener('DOMContentLoaded', initializeMap);
+
+        async function getTileIdFromMap() {
+            if (!selectedLatLon) {
+                mapMessage.innerHTML = '<p style="color:red;">Please click a location on the map first.</p>';
+                return;
+            }
+
+            mapMessage.innerHTML = 'Converting coordinates to MGRS Grid Zone and finding a matching S3 tile...';
+            
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+            
+            const lat = selectedLatLon.lat;
+            const lon = selectedLatLon.lng;
+
+            const gzdPrefix = latLonToSentinelTileID(lat, lon);
+            const result = getRandomTileByGZD(gzdPrefix);
+            const selectedTile = result.tile;
+            
+            tileInput.value = selectedTile;
+            
+            let message = `Tile ID derived from map (GZD): `;
+            
+            if (result.match) {
+                message += `Tile **${selectedTile}** was selected.`;
+            } else {
+                message += `No tiles found for selected region. A closeby region's tile: **${selectedTile}** was selected.`;
+                message += '<br><span style="color:red; font-size: 0.9em;">(Warning: Location outside current available S3 dataset.)</span>';
+            }
+
+            mapMessage.innerHTML = message + '. Now, click the **ANALYZE DATA** button.';
+        }
+
+        function getNDVIVisualization(ndvi_mean, vegetation_status) {
+            if (ndvi_mean === undefined || ndvi_mean === null || isNaN(ndvi_mean)) {
+                return '<p style="color:orange; margin-top: 10px;">NDVI data is N/A.</p>';
+            }
+
+            const MIN_NDVI = 0.1;
+            const MAX_NDVI = 0.8;
+            
+            let indicatorPosition = (ndvi_mean - MIN_NDVI) / (MAX_NDVI - MIN_NDVI) * 100;
+            indicatorPosition = Math.max(0, Math.min(100, indicatorPosition));
+
+            let html = `
+                <p style="margin-bottom: 5px; margin-top: 15px; text-align: left; font-size: 0.95em;">
+                    <strong>NDVI Vegetation Status:</strong> 
+                    <span style="color:#00ffff; font-weight: bold;">${vegetation_status.toUpperCase()}</span> 
+                    (Mean: ${ndvi_mean.toFixed(4)})
+                </p>
+                <div class="ndvi-bar-container">
+                    <div class="ndvi-bar-fill"></div>
+                    <div class="ndvi-bar-indicator" style="left: ${indicatorPosition}%;"></div>
+                </div>
+                <div class="ndvi-legend">
+                    <span style="color: #ff3333;">Sparse / Poor Health (0.1)</span>
+                    <span style="color: #33cc33;">Dense / High Health (0.8)</span>
+                </div>
+            `;
+            
+            return html;
+        }
+
+
+        function formatRawMetrics(latestData) {
+            if (!latestData) return 'No raw data available.';
+            
+            let html = '<h4>Latest Data Fields:</h4>';
+            const fieldsToDisplay = [
+                { key: 'tile', label: 'Tile ID' },
+                { key: 'date', label: 'Observation Date' },
+                { key: 'water_area_m2', label: 'Water Area (m²)' },
+                { key: 'foam_fraction', label: 'Foam Fraction' },
+                { key: 'ndvi_mean', label: 'NDVI Mean' },
+                { key: 'ndvi_median', label: 'NDVI Median' },
+                { key: 'vegetation_status', label: 'Vegetation Status' },
+            ];
+            
+            const latestMetrics = latestData.data;
+
+            fieldsToDisplay.forEach(field => {
+                let value = latestMetrics[field.key];
+                let displayValue = value === undefined || value === null ? 'N/A' : value;
+
+                if (typeof displayValue === 'number') {
+                    if (field.key === 'water_area_m2') {
+                        displayValue = `${Math.round(displayValue).toLocaleString()} m²`;
+                    } else if (field.key === 'foam_fraction') {
+                        displayValue = (displayValue * 100).toFixed(2) + '%';
+                    } else if (field.key === 'ndvi_mean' || field.key === 'ndvi_median') {
+                        displayValue = displayValue.toFixed(4);
+                    }
+                }
+                
+                html += `<p><strong>${field.label}:</strong> <span>${displayValue}</span></p>`;
+            });
+
+            const ndviMean = latestMetrics.ndvi_mean;
+            const vegetationStatus = latestMetrics.vegetation_status || 'N/A';
+            html += getNDVIVisualization(ndviMean, vegetationStatus);
+            
+            return html;
+        }
+
+        function buildBandsHtml(data) {
+            const candidateProps = [
+                'band_urls',
+                'bands',
+                'band_thumbnails',
+                'band_images',
+                'band_urls_list'
+            ];
+
+            let bandList = null;
+
+            for (const prop of candidateProps) {
+                if (data && data[prop]) {
+                    bandList = data[prop];
+                    break;
+                }
+            }
+
+            if (bandList && typeof bandList === 'object' && !Array.isArray(bandList)) {
+                const arr = [];
+                for (const key in bandList) {
+                    if (Object.prototype.hasOwnProperty.call(bandList, key)) {
+                        arr.push({ name: key, url: bandList[key] });
+                    }
+                }
+                bandList = arr;
+            }
+
+            if (Array.isArray(bandList) && bandList.length > 0 && typeof bandList[0] === 'string') {
+                bandList = bandList.map((u, i) => ({ name: `Band ${i+1}`, url: u }));
+            }
+
+            if (Array.isArray(bandList) && bandList.length > 0 && typeof bandList[0] === 'object') {
+                bandList = bandList.map((item, idx) => {
+                    if (item.url) return { name: item.name || item.band || `Band ${idx+1}`, url: item.url };
+                    return null;
+                }).filter(Boolean);
+            }
+
+            if (!bandList || bandList.length === 0) return '';
+
+            let bandsHtml = `<div class="bands-column">
+                                <div class="bands-title">Bands / Layers</div>
+                                <div class="bands-list">`;
+
+            bandList.forEach(b => {
+                const safeLabel = String(b.name || 'band').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const safeUrl = b.url || '';
+                if (!safeUrl) return;
+                bandsHtml += `<div class="band-thumb" title="${safeLabel}">
+                                <img src="${safeUrl}" alt="${safeLabel}" onerror="this.style.opacity=0.6; this.style.filter='grayscale(1)';">
+                                <div class="band-label">${safeLabel}</div>
+                              </div>`;
+            });
+
+            bandsHtml += `   </div>
+                          </div>`;
+
+            return bandsHtml;
+        }
+
+        async function analyzeLocation() {
+            const tileId = tileInput.value.trim();
+            
+            if (!tileId) {
+                resultsDiv.innerHTML = '<h3 style="color:red;">Please enter a valid Tile ID.</h3>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '';
+            loadingDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tile: tileId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(data.error || `No data found for tile ${tileId}.`);
+                    }
+                    throw new Error(data.error || 'Unknown API error.');
+                }
+                
+                const aiSummary = data.ai_summary 
+                    ? data.ai_summary.replace(/\n/g, '<br>') 
+                    : "AI summary is currently **unavailable** or failed on the backend.";
+
+                const latestRawData = data.raw_metrics_data.length > 0 
+                    ? data.raw_metrics_data[data.raw_metrics_data.length - 1] 
+                    : null;
+                const rawMetricsHtml = formatRawMetrics(latestRawData);
+
+                const imageUrl = data.most_recent_thumbnail_url || null;
+                const bandsHtml = buildBandsHtml(data); 
+
+                let imageAndBandsHtml = '<div class="image-bands-row">';
+                if (imageUrl) {
+                    imageAndBandsHtml += `<div class="main-image"><h4 style="color:#90ee90; margin:0 0 6px 0;">Most Recent Satellite Snapshot (${data.latest_data_date || 'date N/A'})</h4>
+                                            <img id="thumbnail" src="${imageUrl}" alt="Latest Satellite Thumbnail"></div>`;
+                } else {
+                    imageAndBandsHtml += `<div class="main-image"><h4 style="color:#90ee90; margin:0 0 6px 0;">Most Recent Satellite Snapshot (${data.latest_data_date || 'date N/A'})</h4>
+                                            <p style="color:orange;">Thumbnail image not available for the most recent date.</p></div>`;
+                }
+
+                imageAndBandsHtml += bandsHtml;
+                imageAndBandsHtml += '</div>';
+
+                let html = `
+                    <h2 style="color: #90ee90;">✅ ANALYSIS REPORT: ${data.tile}</h2>
+                    <p style="text-align: left; font-size: 0.9em; margin-top: 5px; margin-bottom: 15px;">
+                        <strong>Analysis Period:</strong> ${data.analysis_period}<br>
+                        <strong>Total Data Points Analyzed:</strong> ${data.raw_metrics_count} records.
+                    </p>
+
+                    ${imageAndBandsHtml}
+
+                    <h3>[RAW METRICS] Latest Snapshot:</h3>
+                    <div class="data-point" id="raw-data-details">
+                        ${rawMetricsHtml}
+                    </div>
+
+                    <h3>[AI INSIGHTS] Comprehensive Environmental Summary</h3>
+                    <div class="ai-summary-point">
+                        ${aiSummary}
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = html;
+
+                document.getElementById('command-panel').scrollTop = 0;
+
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<h2 style="color:red;">❌ ERROR: ANALYSIS FAILED</h2><p>Error: ${error.message}</p><p>Please check the Tile ID or API connectivity.</p>`;
+                console.error("Fetch Error:", error);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
